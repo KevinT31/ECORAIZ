@@ -1,39 +1,121 @@
-# ECORAIZ — Architecture Notes
+# ECORAIZ — Architecture
 
-## System Boundaries
+## 1. Architectural Goal
 
-The public showcase intentionally separates three surfaces:
+ECORAIZ is not only a public marketing site. The platform is designed as a layered product where public acquisition, authenticated commercial operations and analytical projection remain separated.
 
-1. **Public Website** — commercial discovery and customer-facing content.
-2. **CRM** — authenticated operational workflows.
-3. **Ecolytics** — authenticated analytics and reporting capabilities.
+## 2. Main Layers
 
-## Logical Flow
+### Public web
+
+The public surface is implemented with Next.js and contains commercial content, property discovery flows, attribution and public materials.
+
+### Identity and access
+
+Protected routes authenticate through Supabase Auth. CRM and Ecolytics access also requires an enabled internal profile.
+
+The private implementation documents:
+
+- HttpOnly session cookies
+- SameSite=Lax
+- Secure cookies in production
+- server-side token renewal
+- role/profile revalidation
+- MFA/TOTP for privileged roles
+- RLS-based data access
+
+### CRM
+
+The operational data model includes contacts, leads, opportunities, consent, qualification, visits, activities/tasks and assignment history.
+
+### Audit and tracking
+
+Operational events are audited. A separate canonical-event projection is intended for analytics and deliberately excludes direct PII/free-text fields.
+
+### Analytics
+
+The analytical direction is:
+
+```text
+Operational audit/events
+        ↓
+Canonical commercial events
+        ↓
+Approved ingestion identity
+        ↓
+BigQuery
+        ↓
+dbt staging / quality / cohort models
+        ↓
+BI / Ecolytics
+```
+
+The repository contains preparatory models and contracts; not every production analytics connection is active.
+
+## 3. High-Level Diagram
 
 ```mermaid
 flowchart TB
-    Public[Public User] --> Website[Next.js Website]
-    Team[Authorized Team] --> Auth[Authentication]
+    subgraph Public
+      Web[Next.js Web]
+      Telemetry[PostHog Events]
+    end
 
-    Auth --> CRM
-    Auth --> Ecolytics
+    subgraph Access
+      Auth[Supabase Auth]
+      Profiles[Internal Profiles]
+      MFA[MFA / TOTP]
+    end
 
-    Website --> Domain[Shared Domain Contracts]
-    CRM --> Domain
-    Ecolytics --> Domain
+    subgraph Operations
+      CRM[CRM]
+      Inventory[Inventory Domain]
+      Audit[Audit]
+      Tracking[Tracking]
+    end
 
-    Domain --> Data[Supabase / Data Services]
-    Website --> Telemetry[Product Analytics]
-    CRM --> Automation[Automation Workflows]
+    subgraph Analytics
+      Canonical[Canonical Events]
+      BQ[BigQuery]
+      DBT[dbt]
+      BI[Metabase / Ecolytics]
+    end
 
-    CI[CI Checks] --> Deploy[Vercel]
-    Website --> Deploy
+    Web --> Auth
+    Auth --> Profiles
+    Profiles --> CRM
+    Profiles --> MFA
+    CRM --> Audit
+    CRM --> Inventory
+    Web --> Tracking
+    Tracking --> Telemetry
+    Audit --> Canonical
+    Canonical --> BQ
+    BQ --> DBT
+    DBT --> BI
 ```
 
-## Design Considerations
+## 4. Security Boundaries
 
-- Public and internal functionality are intentionally separated.
-- Authentication protects operational functionality.
-- Business data and infrastructure details are not published in this showcase.
-- CI validates application quality before deployment.
-- Product analytics are treated as a first-class part of the product architecture.
+- Browser code must not receive privileged Supabase keys.
+- Authenticated routes re-check user/profile state.
+- RLS is part of the authorization model.
+- Privileged reassignment/management workflows require stronger authorization.
+- Demo data and operational data are intentionally distinguished.
+- Analytical events are designed to minimize PII propagation.
+
+## 5. Validation Strategy
+
+The private project uses multiple validation layers:
+
+- lint / typecheck
+- application build
+- domain tests
+- PostgreSQL and RLS tests
+- backup and restore checks
+- artifact integrity manifests
+- PostHog behavior checks
+- Playwright browser flows
+- responsive/accessibility checks
+
+This architecture documentation describes the private implementation at a portfolio-safe level; it is not a deployment guide.
