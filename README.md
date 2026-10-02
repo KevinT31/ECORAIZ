@@ -103,6 +103,10 @@ The production codebase stays private to avoid publishing:
 
 ECORAIZ demonstrates my work across **full-stack product architecture, PropTech, cloud services, authentication, analytics, automation and deployment engineering**.
 
+## More Documentation
+
+[Architecture notes](./docs/ARCHITECTURE.md)
+
 ---
 
 **Private source repository · Public architecture showcase**
