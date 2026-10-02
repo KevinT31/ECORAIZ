@@ -1,112 +1,154 @@
+<div align="center">
+
 # ECORAIZ
 
-> **Public project showcase.** The production source repository remains private because it contains operational business logic, infrastructure configuration and internal workflows.
+### PropTech Platform · CRM · Analytics · Automation
+
+**Public engineering showcase — production source remains private**
+
+[Live website](https://ecoraiz.pe) · [Architecture](./docs/ARCHITECTURE.md) · [Project status](./docs/STATUS.md)
+
+</div>
+
+---
 
 ## Overview
 
-**ECORAIZ** is a PropTech platform designed to support a real-estate operation through a public commercial website and protected internal tools.
+**ECORAIZ** is a PropTech platform that combines a public real-estate website with protected internal tools for commercial operations and analytics.
 
-The platform combines a customer-facing web experience with CRM workflows, analytics, inventory-oriented domain logic, product telemetry and automation-ready operational processes.
+The private platform is structured as a monorepo with a **Next.js public web application**, protected **CRM** workflows, **Ecolytics** analytics surfaces, Supabase-backed authentication/data services, product telemetry, automation preparation and CI-driven validation.
 
-**Live website:** https://ecoraiz.pe
+This repository intentionally documents the engineering work without exposing operational source code, customer data, credentials or internal business rules.
 
-## What the Platform Covers
+## Product Surfaces
 
-- Public real-estate website
-- Protected CRM workflows
-- Internal analytics / **Ecolytics**
-- Authentication and role/profile-aware access
-- Inventory and operational-domain contracts
-- Event tracking and product analytics
-- Automation specifications
-- Versioned database/infrastructure preparation
-- Automated quality checks and browser tests
-- Vercel-based deployment workflow
+| Surface | Purpose | Access |
+|---|---|---|
+| Public website | Commercial content, property discovery and public materials | Public |
+| CRM | Leads, opportunities, activities, tasks, qualification and visits | Authenticated + authorized roles |
+| Ecolytics | Commercial/analytics access and reporting entry point | Authenticated + authorized roles |
+| Operational data layer | Security, CRM, audit, inventory and tracking schemas | Server / policy controlled |
+| Automation layer | Operational workflow specifications and integrations | Private |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Visitor[Website Visitor] --> Web[Public Next.js Website]
+    Visitor[Public Visitor] --> Web[Next.js Public Website]
+    Team[Authorized Team] --> Auth[Supabase Auth]
 
-    Agent[Authorized Team Member] --> Auth[Authentication]
     Auth --> CRM[Protected CRM]
-    Auth --> Analytics[Ecolytics]
+    Auth --> Ecolytics[Ecolytics]
 
-    Web --> Domain[Operational Domain]
+    Web --> Domain[Domain + Tracking Layer]
     CRM --> Domain
-    Analytics --> Domain
+    Ecolytics --> Domain
 
-    Domain --> Supabase[Supabase Services]
-    Web --> Telemetry[Product Analytics]
-    Automation[n8n Workflows] --> Domain
+    Domain --> DB[(Supabase / PostgreSQL)]
+    Domain --> Audit[Audit Trail]
+    Web --> ProductAnalytics[PostHog]
 
-    Web --> CI[CI / Quality Gates]
-    CI --> Vercel[Vercel Deployment]
+    Audit --> Events[Canonical Commercial Events]
+    Events --> Warehouse[BigQuery / dbt projection]
+
+    Automation[n8n / Integrations] --> Domain
+    CI[CI + Playwright + DB checks] --> Deploy[Vercel]
 ```
+
+[Read the detailed architecture →](./docs/ARCHITECTURE.md)
+
+## Implemented Engineering Scope
+
+### Authentication & Authorization
+
+- Supabase authentication flow for protected areas.
+- Role/profile-aware access to CRM and Ecolytics.
+- Row Level Security for operational data.
+- MFA/TOTP support for privileged workflows.
+- Session renewal and server-side access checks.
+- No privileged service-role key is exposed to the browser.
+
+### CRM Domain
+
+The private implementation includes operational workflows for:
+
+- contacts
+- leads
+- opportunities
+- consent
+- qualification
+- visits
+- notes
+- loss/maturation/reactivation
+- tasks
+- manual assignment and reassignment
+- audit history
+
+### Analytics & Event Design
+
+Commercial milestones are projected into canonical events designed to exclude free-text PII. The architecture prepares those events for ingestion into **BigQuery** and transformation with **dbt**.
+
+### Quality Engineering
+
+The private repository contains automated validation around:
+
+- linting and TypeScript
+- application builds
+- domain tests
+- PostgreSQL/RLS checks
+- backup/restore verification
+- artifact integrity
+- PostHog privacy behavior
+- browser flows with Playwright
+- responsive/accessibility behavior
+
+A documented technical review recorded **116 database checks**, successful logical restore validation and passing browser/domain quality gates in the reviewed environment.
 
 ## Technology
 
 | Area | Technologies |
 |---|---|
 | Frontend | Next.js · React · TypeScript · Tailwind CSS |
-| Data & Auth | Supabase |
-| Product Analytics | PostHog |
+| Data & Auth | Supabase · PostgreSQL · RLS · MFA/TOTP |
+| Analytics | PostHog · BigQuery · dbt · Metabase integration path |
 | Automation | n8n |
-| Testing | Playwright · Domain Tests |
-| Tooling | Turborepo · pnpm |
+| Testing | Playwright · Node test runners · SQL/RLS tests |
+| Monorepo | Turborepo · pnpm |
 | Deployment | Vercel |
-| Quality | ESLint · TypeScript · CI |
+| CI | GitHub Actions |
 
-## Engineering Highlights
+## Engineering Decisions
 
-### Public + Internal Product Surfaces
+**Public and operational surfaces are separated.** A public route is not treated as an access-control boundary.
 
-The platform separates the public commercial website from authenticated operational capabilities. CRM and analytics functionality are not exposed as public demos.
+**Authorization lives in data policies and server checks.** Commercial roles are not trusted from editable user metadata.
 
-### Access Control
+**Analytics is designed around canonical events.** The event projection avoids propagating names, phone numbers, emails, notes or free-text evidence into the analytical stream.
 
-Internal functionality is designed around authenticated sessions and authorized profiles instead of relying on hidden URLs.
+**Demo state is not presented as production state.** The private documentation explicitly separates implemented software, local verification and integrations that still require approved production accounts or environments.
 
-### Product Analytics
+## Current Status
 
-The web platform supports event instrumentation and analytics to help understand acquisition and user behavior.
+The platform contains substantial implemented application and data-layer work, but not every integration is production-connected. Inventory transaction flows, some automation, warehouse ingestion and external operational services still depend on additional implementation or approved environment configuration.
 
-### Quality Gates
+[See the explicit implemented / pending matrix →](./docs/STATUS.md)
 
-The private project uses automated checks for:
+## Why the Source Is Private
 
-- linting
-- type checking
-- builds
-- domain tests
-- browser-based flows
+The private repository contains:
 
-### Operational Automation
+- internal CRM workflows
+- operational business rules
+- infrastructure configuration
+- authentication/security implementation
+- migration history
+- business data contracts
+- deployment details
 
-Automation workflows are kept separate from public-facing functionality and are designed to support the real-estate operating model without exposing internal processes.
-
-## Repository Strategy
-
-This repository intentionally contains **documentation only**.
-
-The production codebase stays private to avoid publishing:
-
-- internal CRM logic
-- operational workflows
-- infrastructure details
-- environment configuration
-- business data
-- authentication implementation details
-
-## Portfolio Context
-
-ECORAIZ demonstrates my work across **full-stack product architecture, PropTech, cloud services, authentication, analytics, automation and deployment engineering**.
-
-## More Documentation
-
-[Architecture notes](./docs/ARCHITECTURE.md)
+This showcase keeps the architecture reviewable without exposing those assets.
 
 ---
 
-**Private source repository · Public architecture showcase**
+### What this project demonstrates
+
+**Full-stack product architecture · PropTech · secure operational workflows · data governance · analytics engineering · automation · testing · cloud deployment**
